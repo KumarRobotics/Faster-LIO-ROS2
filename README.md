@@ -18,7 +18,7 @@
 
 ```
 cd ~/<work_space>/src
-git clone 
+git clone https://github.com/GangGeon10/Faster-LIO-ROS2.git
 cd ~/<work_space>
 colcon build --symlink install
 ```
