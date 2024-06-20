@@ -1,9 +1,10 @@
 # FASTER-LIO-ROS2
 
-## Test Environment
+Migration [Faster-LIO](https://github.com/gaoxiang12/faster-lio) to ROS2 
+
+## Environment
 * Ubuntu 20.04 LTS
 * ROS galactic version
-
 
 ## Dependency
 1. ROS galactic
@@ -20,7 +21,7 @@
 cd ~/<work_space>/src
 git clone https://github.com/GangGeon10/Faster-LIO-ROS2.git
 cd ~/<work_space>
-colcon build --symlink install
+colcon build --symlink-install
 ```
 
 ## Run
@@ -28,7 +29,6 @@ colcon build --symlink install
 source install/local_setup.sh
 ros2 launch faster_lio mapping_ouster64.launch.py
 ```
-
 
 ## Acknowledgments
 Thanks to [Faster-LIO](https://github.com/gaoxiang12/faster-lio) for their research
