@@ -31,7 +31,9 @@ const std::string PARAM_ESTI_PLANE_THRESHOLD ="esti_plane_threshold";
 const std::string PARAM_PREPROCESS_BLIND ="preprocess.blind";
 const std::string PARAM_PREPROCESS_TIME_SCLAE ="preprocess.time_scale"; 
 const std::string PARAM_PREPROCESS_LIDAR_TYPE ="preprocess.lidar_type";
-const std::string PARAM_PREPROCESS_SCAN_LINE ="preprocess.scan_line";
+const std::string PARAM_PREPROCESS_VERTICAL_RESOLUTION ="proprocess.vertical_resolution";
+const std::string PARAM_PREPROCESS_HORIZONTAL_RESOLUTION ="process.horizontal_resolution";
+// const std::string PARAM_PREPROCESS_SCAN_LINE ="preprocess.scan_line";
 const std::string PARAM_POINT_FILTER_NUM ="point_filter_num";
 const std::string PARAM_FEATRUE_EXTRACT_ENABLE ="feature_extract_enable";  
 const std::string PARAM_RUNTIME_POS_LOG_ENABLE ="runtime_pos_log_enable";
@@ -167,7 +169,8 @@ void LaserMapping::LoadParams() {
     this->declare_parameter(PARAM_PREPROCESS_TIME_SCLAE, rclcpp::PARAMETER_DOUBLE);
     this->declare_parameter(PARAM_PREPROCESS_LIDAR_TYPE, rclcpp::PARAMETER_INTEGER);
 
-    this->declare_parameter(PARAM_PREPROCESS_SCAN_LINE,  rclcpp::PARAMETER_INTEGER);
+    this->declare_parameter(PARAM_PREPROCESS_VERTICAL_RESOLUTION,  rclcpp::PARAMETER_INTEGER);
+    this->declare_parameter(PARAM_PREPROCESS_HORIZONTAL_RESOLUTION,  rclcpp::PARAMETER_INTEGER);
     this->declare_parameter(PARAM_POINT_FILTER_NUM, rclcpp::PARAMETER_INTEGER);
     this->declare_parameter(PARAM_FEATRUE_EXTRACT_ENABLE,  rclcpp::PARAMETER_BOOL);
 
@@ -255,8 +258,12 @@ void LaserMapping::LoadParams() {
         RCLCPP_WARN(this->get_logger(), "Parameter lidar_type not found");
     }
 
-    if (!this->get_parameter(PARAM_PREPROCESS_SCAN_LINE, preprocess_->NumScans())) {
+    if (!this->get_parameter(PARAM_PREPROCESS_VERTICAL_RESOLUTION, preprocess_->NumScans())) {
         RCLCPP_WARN(this->get_logger(), "Parameter preprocess_->NumScans() not found");
+    }
+
+    if (!this->get_parameter(PARAM_PREPROCESS_HORIZONTAL_RESOLUTION, preprocess_->NumHorizontalScans())) {
+        RCLCPP_WARN(this->get_logger(), "Parameter preprocess_->NumHorizontalScans() not found");
     }
 
     if (!this->get_parameter(PARAM_POINT_FILTER_NUM, preprocess_->PointFilterNum())) {
@@ -376,7 +383,8 @@ bool LaserMapping::LoadParamsFromYAML(const std::string &yaml_file) {
         preprocess_->Blind() = yaml["preprocess"]["blind"].as<double>();
         preprocess_->TimeScale() = yaml["preprocess"]["time_scale"].as<double>();
         lidar_type = yaml["preprocess"]["lidar_type"].as<int>();
-        preprocess_->NumScans() = yaml["preprocess"]["scan_line"].as<int>();
+        preprocess_->NumScans() = yaml["preprocess"]["vertical_resolution"].as<int>();
+        preprocess_->NumHorizontalScans() = yaml["preprocess"]["horizontal_resolution"].as<int>();
         preprocess_->PointFilterNum() = yaml["point_filter_num"].as<int>();
         preprocess_->FeatureEnabled() = yaml["feature_extract_enable"].as<bool>();
         extrinsic_est_en_ = yaml["mapping"]["extrinsic_est_en"].as<bool>();
@@ -615,7 +623,12 @@ void LaserMapping::StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::Shar
             
 
             PointCloudType::Ptr ptr(new PointCloudType());
-            preprocess_->Process(msg, ptr);
+            preprocess_->PCProcess(msg, ptr);
+
+            // Note: point cloud preprocess, this reduces the point cloud size
+            pcl::PointCloud<ouster_ros::Point> points;
+            pcl::fromROSMsg(*msg, points);
+            preprocess_->PCProcess(msg, ptr);
             lidar_buffer_.push_back(ptr);
             // time_buffer_.push_back(msg->header.stamp.toSec());
             // last_timestamp_lidar_ = msg->header.stamp.toSec();
@@ -659,7 +672,7 @@ void LaserMapping::LivoxPCLCallBack(const livox_ros_driver2::msg::CustomMsg::Sha
             }
 
             PointCloudType::Ptr ptr(new PointCloudType());
-            preprocess_->Process(msg, ptr);
+            preprocess_->PCProcess(msg, ptr);
             lidar_buffer_.emplace_back(ptr);
             time_buffer_.emplace_back(last_timestamp_lidar_);
         },
@@ -1046,11 +1059,23 @@ void LaserMapping::PublishFrameWorld() {
 
 // void LaserMapping::PublishFrameBody(const ros::Publisher &pub_laser_cloud_body) {
 void LaserMapping::PublishFrameBody(const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_laser_cloud_body) {
-    int size = scan_undistort_->points.size();
-    PointCloudType::Ptr laser_cloud_imu_body(new PointCloudType(size, 1));
+    int size_scan = scan_undistort_->points.size();
+    int size_full = preprocess_->NumHorizontalScans() * preprocess_->NumScans();
 
-    for (int i = 0; i < size; i++) {
+    PointCloudType::Ptr laser_cloud_imu_body(new PointCloudType(size_full, 1));
+
+    for (int i = 0; i < size_scan; i++) {
         PointBodyLidarToIMU(&scan_undistort_->points[i], &laser_cloud_imu_body->points[i]);
+    }
+
+    // Note: set the point cloud to size that matches the original input, so that the ros_numpy.numpify function in the
+    // infer node can parse it properly 
+    if(size_scan < size_full){
+        for(int i = size_scan; i < size_full; i++){
+            laser_cloud_imu_body->points[i].x = 0;
+            laser_cloud_imu_body->points[i].y = 0;
+            laser_cloud_imu_body->points[i].z = 0;
+        }
     }
 
     sensor_msgs::msg::PointCloud2 laserCloudmsg;

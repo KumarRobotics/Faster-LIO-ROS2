@@ -11,12 +11,12 @@ void PointCloudPreprocess::Set(LidarType lid_type, double bld, int pfilt_num) {
     point_filter_num_ = pfilt_num;
 }
 
-void PointCloudPreprocess::Process(const livox_ros_driver2::msg::CustomMsg::SharedPtr msg, PointCloudType::Ptr &pcl_out) {
+void PointCloudPreprocess::PCProcess(const livox_ros_driver2::msg::CustomMsg::SharedPtr msg, PointCloudType::Ptr &pcl_out) {
     AviaHandler(msg);
     *pcl_out = cloud_out_;
 }
 
-void PointCloudPreprocess::Process(const sensor_msgs::msg::PointCloud2::SharedPtr msg, PointCloudType::Ptr &pcl_out) {
+void PointCloudPreprocess::PCProcess(const sensor_msgs::msg::PointCloud2::SharedPtr msg, PointCloudType::Ptr &pcl_out) {
     switch (lidar_type_) {
         case LidarType::OUST64:
             Oust64Handler(msg);
