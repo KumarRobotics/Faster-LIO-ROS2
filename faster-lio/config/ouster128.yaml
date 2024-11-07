@@ -1,8 +1,8 @@
 laserMapping:
     ros__parameters:
         common:
-            lid_topic:  "/os_node/points"
-            imu_topic:  "/os_node/imu "
+            lid_topic:  "/ouster/points"
+            imu_topic:  "/ouster/imu"
             time_sync_en: false         # ONLY turn on when external time synchronization is really not possible
             
         preprocess:
