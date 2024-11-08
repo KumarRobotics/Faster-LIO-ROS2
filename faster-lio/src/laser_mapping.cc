@@ -476,15 +476,15 @@ void LaserMapping::SubAndPubToROS(){
     // ROS2
 
     if (preprocess_->GetLidarType() == LidarType::AVIA) {
-        sub_livox_ = this->create_subscription<livox_ros_driver2::msg::CustomMsg>(
-            lidar_topic, rclcpp::QoS(200000).best_effort(), [this](const livox_ros_driver2::msg::CustomMsg::SharedPtr msg) { LivoxPCLCallBack(msg); });
+        sub_livox_ = this->create_subscription<livox_ros_driver2::msg::CustomMsg>(lidar_topic, rclcpp::QoS(200000).best_effort(), 
+                                [this](const livox_ros_driver2::msg::CustomMsg::SharedPtr msg) { LivoxPCLCallBack(msg); });
     } else {
-        sub_pcl_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-            lidar_topic, rclcpp::QoS(200000).best_effort(), [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) { StandardPCLCallBack(msg); });
+        sub_pcl_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(lidar_topic, rclcpp::QoS(200000).best_effort(), 
+                                [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) { StandardPCLCallBack(msg); });
     }
 
-    sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(imu_topic, 200000,
-                                              [this](const sensor_msgs::msg::Imu::SharedPtr msg) { IMUCallBack(msg); });
+    sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(imu_topic, rclcpp::QoS(200000).best_effort(), 
+                                [this](const sensor_msgs::msg::Imu::SharedPtr msg) { IMUCallBack(msg); });
 
     // ROS publisher init
     // path_.header.stamp = ros::Time::now();
