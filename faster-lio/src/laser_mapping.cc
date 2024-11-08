@@ -233,10 +233,10 @@ void LaserMapping::LoadParams() {
     if (!this->get_parameter(PARAM_MAPPING_ACC_COV, acc_cov)) {
         RCLCPP_WARN(this->get_logger(), "Parameter acc_cov not found");
     }
-     if (!this->get_parameter(PARAM_MAPPING_B_GYR_COV, b_gyr_cov)) {
+    if (!this->get_parameter(PARAM_MAPPING_B_GYR_COV, b_gyr_cov)) {
         RCLCPP_WARN(this->get_logger(), "Parameter b_gyr_cov not found");
     }
-     if (!this->get_parameter(PARAM_MAPPING_B_ACC_COV, b_acc_cov)) {
+    if (!this->get_parameter(PARAM_MAPPING_B_ACC_COV, b_acc_cov)) {
         RCLCPP_WARN(this->get_logger(), "Parameter b_acc_cov not found");
     }
 
@@ -248,13 +248,13 @@ void LaserMapping::LoadParams() {
         RCLCPP_WARN(this->get_logger(), "Parameter options::ESTI_PLANE_THRESHOLD not found");
     }
     
-     if (!this->get_parameter(PARAM_PREPROCESS_BLIND, preprocess_->Blind())) {
+    if (!this->get_parameter(PARAM_PREPROCESS_BLIND, preprocess_->Blind())) {
         RCLCPP_WARN(this->get_logger(), "Parameter preprocess_->Blind() not found");
     }
-     if (!this->get_parameter(PARAM_PREPROCESS_TIME_SCLAE,  preprocess_->TimeScale())) {
+    if (!this->get_parameter(PARAM_PREPROCESS_TIME_SCLAE,  preprocess_->TimeScale())) {
         RCLCPP_WARN(this->get_logger(), "Parameter  preprocess_->TimeScale() not found");
     }
-     if (!this->get_parameter(PARAM_PREPROCESS_LIDAR_TYPE, lidar_type)) {
+    if (!this->get_parameter(PARAM_PREPROCESS_LIDAR_TYPE, lidar_type)) {
         RCLCPP_WARN(this->get_logger(), "Parameter lidar_type not found");
     }
 
@@ -623,8 +623,6 @@ void LaserMapping::StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::Shar
             
 
             PointCloudType::Ptr ptr(new PointCloudType());
-            preprocess_->PCProcess(msg, ptr);
-
             // Note: point cloud preprocess, this reduces the point cloud size
             pcl::PointCloud<ouster_ros::Point> points;
             pcl::fromROSMsg(*msg, points);
