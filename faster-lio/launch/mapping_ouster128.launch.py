@@ -15,10 +15,10 @@ def generate_launch_description():
     stdout_colorized_envvar = SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1')
     # use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     
-    rviz = LaunchConfiguration('rviz')
+    rviz = LaunchConfiguration('rviz', default="false")
     rviz_use_arg = DeclareLaunchArgument(
         'rviz',
-        default_value='False',
+        default_value='false',
         description='Whether to launch RVIZ'
     )
     
@@ -42,7 +42,7 @@ def generate_launch_description():
                     '--ros-args', '--log-level', 'warn'],
         parameters=[{'use_sim_time' : True}],
         output='screen',
-        condition=IfCondition(rviz_use_arg)
+        condition=IfCondition(rviz)
     )
 
     ld = LaunchDescription([launch_ros.actions.SetParameter(name='use_sim_time', value=True),
