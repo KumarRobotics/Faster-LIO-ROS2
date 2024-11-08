@@ -15,7 +15,7 @@ def generate_launch_description():
     stdout_colorized_envvar = SetEnvironmentVariable('RCUTILS_COLORIZED_OUTPUT', '1')
     # use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     
-    rviz = LaunchConfiguration('rviz', default="false")
+    rviz = LaunchConfiguration('rviz', default='false')
     rviz_use_arg = DeclareLaunchArgument(
         'rviz',
         default_value='false',
