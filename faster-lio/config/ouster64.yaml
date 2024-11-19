@@ -2,7 +2,7 @@ laserMapping:
     ros__parameters:
         common:
             lid_topic:  "/ouster/points"
-            imu_topic:  "/xsens/imu/data"
+            imu_topic:  "/ouster/imu"
             time_sync_en: false         # ONLY turn on when external time synchronization is really not possible
             
         preprocess:
@@ -41,7 +41,7 @@ laserMapping:
         feature_extract_enable: false
         point_filter_num: 3
         max_iteration: 3
-        filter_size_surf: 0.5
+        filter_size_surf: 0.1
         filter_size_map: 0.5             
         cube_side_length: 1000.0
 
