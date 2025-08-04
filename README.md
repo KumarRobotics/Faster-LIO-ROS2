@@ -7,7 +7,7 @@ Migration [Faster-LIO](https://github.com/gaoxiang12/faster-lio) to ROS2
 * ROS galactic version
 
 ## Dependency
-1. ROS galactic
+1. ROS Jazzy
 2. glog: ```sudo apt-get install libgoogle-glog-dev```
 3. eigen: ```sudo apt-get install libeigen3-dev```
 4. pcl: ```sudo apt-get install libpcl-dev```
