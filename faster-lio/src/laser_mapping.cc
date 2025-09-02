@@ -605,38 +605,6 @@ void LaserMapping::Run() {
     frame_num_++;
 }
 
-// void LaserMapping::StandardPCLCallBack(const sensor_msgs::PointCloud2::ConstPtr &msg) {
-void LaserMapping::StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
-    mtx_buffer_.lock();
-    Timer::Evaluate(
-        [&, this]() {
-            scan_count_++;
-            // if (msg->header.stamp.toSec() < last_timestamp_lidar_) {
-            //     LOG(ERROR) << "lidar loop back, clear buffer";
-            //     lidar_buffer_.clear();
-            // }
-            //ROS2
-            if ((double)msg->header.stamp.sec + (double)1e-9* msg->header.stamp.nanosec < last_timestamp_lidar_) {
-                LOG(ERROR) << "lidar loop back, clear buffer";
-                lidar_buffer_.clear();
-            }
-            
-
-            PointCloudType::Ptr ptr(new PointCloudType());
-            // Note: point cloud preprocess, this reduces the point cloud size
-            pcl::PointCloud<ouster_ros::Point> points;
-            pcl::fromROSMsg(*msg, points);
-            preprocess_->PCProcess(msg, ptr);
-            lidar_buffer_.push_back(ptr);
-            // time_buffer_.push_back(msg->header.stamp.toSec());
-            // last_timestamp_lidar_ = msg->header.stamp.toSec();
-            //ROS2
-            time_buffer_.push_back((double)msg->header.stamp.sec + (double)1e-9* msg->header.stamp.nanosec);
-            last_timestamp_lidar_ =(double) msg->header.stamp.sec + (double)1e-9* msg->header.stamp.nanosec;
-        },
-        "Preprocess (Standard)");
-    mtx_buffer_.unlock();
-}
 
 // void LaserMapping::LivoxPCLCallBack(const livox_ros_driver::CustomMsg::ConstPtr &msg) {
 void LaserMapping::LivoxPCLCallBack(const livox_ros_driver2::msg::CustomMsg::SharedPtr msg) {
@@ -732,6 +700,59 @@ void LaserMapping::StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::Shar
         "Preprocess (Standard)");
     mtx_buffer_.unlock();
 }
+
+void LaserMapping::IMUCallBack(const sensor_msgs::msg::Imu::SharedPtr msg_in) {
+    publish_count_++;
+    std::cout << "\n[DEBUG] ===== IMUCallBack =====" << std::endl;
+    std::cout << "[DEBUG] publish_count_: " << publish_count_ << std::endl;
+
+    // Deep copy of incoming IMU message
+    sensor_msgs::msg::Imu::SharedPtr msg = std::make_shared<sensor_msgs::msg::Imu>(*msg_in);
+    std::cout << "[DEBUG] Created copy of IMU message" << std::endl;
+
+    // Print input timestamp
+    double msg_in_stamp = static_cast<double>(msg_in->header.stamp.sec) +
+                          1e-9 * static_cast<double>(msg_in->header.stamp.nanosec);
+    std::cout << "[DEBUG] msg_in->header.stamp.sec: " << msg_in->header.stamp.sec << std::endl;
+    std::cout << "[DEBUG] msg_in->header.stamp.nanosec: " << msg_in->header.stamp.nanosec << std::endl;
+    std::cout << "[DEBUG] msg_in timestamp: " << msg_in_stamp << std::endl;
+
+    // Print sync variables
+    std::cout << "[DEBUG] timediff_lidar_wrt_imu_: " << timediff_lidar_wrt_imu_ << std::endl;
+    std::cout << "[DEBUG] time_sync_en_: " << time_sync_en_ << std::endl;
+
+    if (std::abs(timediff_lidar_wrt_imu_) > 0.1 && time_sync_en_) {
+        double adjusted_time = timediff_lidar_wrt_imu_ + msg_in_stamp;
+        rclcpp::Time t(static_cast<uint64_t>(adjusted_time * 1e9));
+        msg->header.stamp = t;
+        std::cout << "[DEBUG] Time sync applied. adjusted_time: " << adjusted_time << std::endl;
+        std::cout << "[DEBUG] msg->header.stamp (adjusted, sec): " << msg->header.stamp.sec << std::endl;
+        std::cout << "[DEBUG] msg->header.stamp (adjusted, nanosec): " << msg->header.stamp.nanosec << std::endl;
+    }
+
+    // Compute final timestamp from possibly updated msg
+    double timestamp = static_cast<double>(msg->header.stamp.sec) +
+                       1e-9 * static_cast<double>(msg->header.stamp.nanosec);
+    std::cout << "[DEBUG] Final timestamp: " << timestamp << std::endl;
+
+    // Lock and update buffer
+    mtx_buffer_.lock();
+    std::cout << "[DEBUG] last_timestamp_imu_: " << last_timestamp_imu_ << std::endl;
+    if (timestamp < last_timestamp_imu_) {
+        LOG(WARNING) << "imu loop back, clear buffer";
+        imu_buffer_.clear();
+        std::cout << "[DEBUG] Cleared imu_buffer_ due to loop back" << std::endl;
+    }
+
+    last_timestamp_imu_ = timestamp;
+    imu_buffer_.emplace_back(msg);
+    std::cout << "[DEBUG] imu_buffer_.size(): " << imu_buffer_.size() << std::endl;
+    std::cout << "[DEBUG] Updated last_timestamp_imu_: " << last_timestamp_imu_ << std::endl;
+    mtx_buffer_.unlock();
+
+    std::cout << "[DEBUG] ===== End IMUCallBack =====" << std::endl;
+}
+
 
 
 bool LaserMapping::SyncPackages() {
