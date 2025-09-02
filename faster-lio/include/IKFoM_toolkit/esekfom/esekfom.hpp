@@ -1690,55 +1690,45 @@ class esekf {
 		
 		// Eigen::Matrix<scalar_type, 12, 12> R_inv = R.inverse();  // or better: LLT or LDLT solver
 		// Eigen::Matrix<scalar_type, 12, 12> P_temp = (P_ * R_inv).inverse();
+		cov P_temp = (P_ / R).inverse();
+                std::cout << "P_temp =\n" << P_temp << std::endl;
 
-                cov P_temp = (P_ / R).inverse();
-		cov P_debug = (P_/R);
-		cov P_debug_inverse = P_debug.inverse();
-                // Eigen::Matrix<scalar_type, 12, Eigen::Dynamic> h_T = h_x_.transpose();
-	        if (!h_x_.allFinite()) {
-		    std::cerr << "[WARN] h_x_ contains non-finite values. Cleaning..." << std::endl;
-		    h_x_ = h_x_.unaryExpr([](scalar_type x) {
-			return std::isfinite(x) ? x : 0.0;
-		    });
-		}
-		
+                cov P_debug = (P_ / R);
+                std::cout << "P_debug =\n" << P_debug << std::endl;
+
+                cov P_debug_inverse = P_debug.inverse();
+                std::cout << "P_debug_inverse =\n" << P_debug_inverse << std::endl;
+
+                if (!h_x_.allFinite()) {
+                    std::cerr << "[WARN] h_x_ contains non-finite values. Cleaning..." << std::endl;
+                    h_x_ = h_x_.unaryExpr([](scalar_type x) {
+                        return std::isfinite(x) ? x : 0.0;
+                    });
+                }
+
                 Eigen::Matrix<scalar_type, 12, 12> HTH = h_x_.transpose() * h_x_;
-                P_debug_inverse.template block<12, 12>(0, 0) += HTH;
+                std::cout << "HTH =\n" << HTH << std::endl;
 
-		// Eigen::Matrix<scalar_type, 12, 12> R_inv = R.inverse();  // Or use solver
-		// Eigen::Matrix<scalar_type, 12, 12> HTRH = h_x_.transpose() * R_inv * h_x_;
-		// P_temp = P_;
-		// P_temp.template block<12, 12>(0, 0) += HTRH;
-                /*
-                Eigen::Matrix<scalar_type, Eigen::Dynamic, Eigen::Dynamic> h_x_cur = Eigen::Matrix<scalar_type,
-                Eigen::Dynamic, Eigen::Dynamic>::Zero(dof_Measurement, n);
-                //std::cout << "line 1767" << std::endl;
-                h_x_cur.col(0) = h_x_.col(0);
-                h_x_cur.col(1) = h_x_.col(1);
-                h_x_cur.col(2) = h_x_.col(2);
-                h_x_cur.col(3) = h_x_.col(3);
-                h_x_cur.col(4) = h_x_.col(4);
-                h_x_cur.col(5) = h_x_.col(5);
-                h_x_cur.col(6) = h_x_.col(6);
-                h_x_cur.col(7) = h_x_.col(7);
-                h_x_cur.col(8) = h_x_.col(8);
-                h_x_cur.col(9) = h_x_.col(9);
-                h_x_cur.col(10) = h_x_.col(10);
-                h_x_cur.col(11) = h_x_.col(11);
-                */
-		if (!h_x_.allFinite()) {
-		    std::cerr << "[ERROR] h_x_ contains NaNs or Infs!" << std::endl;
-		}
+                P_debug_inverse.template block<12, 12>(0, 0) += HTH;
+                std::cout << "P_debug_inverse (after += HTH) =\n" << P_debug_inverse << std::endl;
+
+                if (!h_x_.allFinite()) {
+                    std::cerr << "[ERROR] h_x_ contains NaNs or Infs!" << std::endl;
+                }
 
                 cov P_inv = P_debug_inverse.inverse();
-                // std::cout << "line 1781" << std::endl;
+                std::cout << "P_inv =\n" << P_inv << std::endl;
+
                 K_h = P_inv.template block<n, 12>(0, 0) * h_x_.transpose() * dyn_share.h;
-                // std::cout << "line 1780" << std::endl;
-                // cov_ HTH_cur = cov_::Zero();
-                // HTH_cur. template block<12, 12>(0, 0) = HTH;
-                K_x.setZero();  // = cov_::Zero();
+                std::cout << "K_h =\n" << K_h << std::endl;
+
+                K_x.setZero();
+                std::cout << "K_x (after setZero) =\n" << K_x << std::endl;
+
                 K_x.template block<n, 12>(0, 0) = P_inv.template block<n, 12>(0, 0) * HTH;
-                // K_= (h_x_.transpose() * h_x_ + (P_/R).inverse()).inverse()*h_x_.transpose();
+                std::cout << "K_x (after update) =\n" << K_x << std::endl;
+
+
 #endif
             }
 

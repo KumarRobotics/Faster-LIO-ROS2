@@ -679,36 +679,60 @@ void LaserMapping::LivoxPCLCallBack(const livox_ros_driver2::msg::CustomMsg::Sha
     mtx_buffer_.unlock();
 }
 
-// void LaserMapping::IMUCallBack(const sensor_msgs::Imu::ConstPtr &msg_in) {
-void LaserMapping::IMUCallBack(const sensor_msgs::msg::Imu::SharedPtr msg_in) {
-    publish_count_++;
-    // sensor_msgs::Imu::Ptr msg(new sensor_msgs::Imu(*msg_in));
-    //ROS2
-    sensor_msgs::msg::Imu::SharedPtr msg = std::make_shared<sensor_msgs::msg::Imu>(*msg_in);
-    if (abs(timediff_lidar_wrt_imu_) > 0.1 && time_sync_en_) {
-        
-        // msg->header.stamp = ros::Time().fromSec(timediff_lidar_wrt_imu_ + msg_in->header.stamp.toSec());
-
-        rclcpp::Time t(static_cast<uint64_t>((timediff_lidar_wrt_imu_ + ((double)msg_in->header.stamp.sec + (double)1e-9* msg_in->header.stamp.nanosec))*1e9 ));
-        msg->header.stamp = t;
-    
-    }
-
-    // double timestamp = msg->header.stamp.toSec();
-
-
-    double timestamp =  (double)msg->header.stamp.sec + (double)1e-9* msg->header.stamp.nanosec;
-
+void LaserMapping::StandardPCLCallBack(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
     mtx_buffer_.lock();
-    if (timestamp < last_timestamp_imu_) {
-        LOG(WARNING) << "imu loop back, clear buffer";
-        imu_buffer_.clear();
-    }
+    Timer::Evaluate(
+        [&, this]() {
+            scan_count_++;
+            std::cout << "\n[DEBUG] ===== StandardPCLCallBack =====" << std::endl;
 
-    last_timestamp_imu_ = timestamp;
-    imu_buffer_.emplace_back(msg);
+            // Current timestamp
+            double current_stamp = static_cast<double>(msg->header.stamp.sec) +
+                                   1e-9 * static_cast<double>(msg->header.stamp.nanosec);
+            std::cout << "[DEBUG] msg->header.stamp.sec: " << msg->header.stamp.sec << std::endl;
+            std::cout << "[DEBUG] msg->header.stamp.nanosec: " << msg->header.stamp.nanosec << std::endl;
+            std::cout << "[DEBUG] current_stamp: " << current_stamp << std::endl;
+            std::cout << "[DEBUG] last_timestamp_lidar_: " << last_timestamp_lidar_ << std::endl;
+            std::cout << "[DEBUG] scan_count_: " << scan_count_ << std::endl;
+
+            if (current_stamp < last_timestamp_lidar_) {
+                LOG(ERROR) << "lidar loop back, clear buffer";
+                lidar_buffer_.clear();
+                std::cout << "[DEBUG] Cleared lidar_buffer_ due to loop back" << std::endl;
+            }
+
+            // Allocate new point cloud
+            PointCloudType::Ptr ptr(new PointCloudType());
+            std::cout << "[DEBUG] Allocated new PointCloudType ptr" << std::endl;
+
+            // Raw conversion to ouster_ros::Point
+            pcl::PointCloud<ouster_ros::Point> points;
+            pcl::fromROSMsg(*msg, points);
+            std::cout << "[DEBUG] Converted ROS msg to pcl::PointCloud<ouster_ros::Point>" << std::endl;
+            std::cout << "[DEBUG] points.size(): " << points.size() << std::endl;
+
+            // Preprocessing step
+            preprocess_->PCProcess(msg, ptr);
+            std::cout << "[DEBUG] Preprocessed cloud -> ptr size: " << ptr->size() << std::endl;
+
+            // Push into lidar buffer
+            lidar_buffer_.push_back(ptr);
+            std::cout << "[DEBUG] lidar_buffer_.size(): " << lidar_buffer_.size() << std::endl;
+
+            // Push into time buffer
+            time_buffer_.push_back(current_stamp);
+            std::cout << "[DEBUG] time_buffer_.size(): " << time_buffer_.size() << std::endl;
+
+            // Update last timestamp
+            last_timestamp_lidar_ = current_stamp;
+            std::cout << "[DEBUG] Updated last_timestamp_lidar_: " << last_timestamp_lidar_ << std::endl;
+
+            std::cout << "[DEBUG] ===== End StandardPCLCallBack =====" << std::endl;
+        },
+        "Preprocess (Standard)");
     mtx_buffer_.unlock();
 }
+
 
 bool LaserMapping::SyncPackages() {
     if (lidar_buffer_.empty() || imu_buffer_.empty()) {
